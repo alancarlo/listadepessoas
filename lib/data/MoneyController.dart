@@ -13,7 +13,7 @@ class MoneyController {
       final response = await api.get(
           "https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL,BTC-BRL");
 
-      /// validação de resosta correta
+      /// validação de resposta correta
       if(response?.statusCode == 200){
         return MoneyModel.fromJson(json.decode(json.encode(response?.data)));
       }else{
