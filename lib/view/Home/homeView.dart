@@ -1,6 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:money_search/data/MoneyController.dart';
 import 'package:money_search/data/api.dart';
+import 'package:money_search/data/cache.dart';
+import 'package:money_search/data/internet.dart';
+import 'package:money_search/data/string.dart';
 import 'package:money_search/model/ListPersonModel.dart';
 import 'package:money_search/model/MoneyModel.dart';
 
@@ -13,6 +18,24 @@ class HomeView extends StatefulWidget {
 /// instancia do modelo para receber as informações
 
 class _HomeViewState extends State<HomeView> {
+ 
+  checkConnection() async {
+    internet = await CheckInternet().checkConnection();
+    if(internet == false) {
+      readMemory();
+    }
+    setState(() {
+    });
+  }
+  
+  bool internet = true;
+  
+  @override 
+  initState(){
+    checkConnection();
+    super.initState();
+  }
+
   List<ListPersonModel> model = [];
 
   @override
@@ -22,8 +45,27 @@ class _HomeViewState extends State<HomeView> {
           title: Text('Lista de pessoas'),
           centerTitle: true,
           backgroundColor: Colors.lightGreen,
+          actions: [
+            Visibility(
+              visible: internet == false,
+              child: Icon(Icons.network_cell_outlined))
+          ],
         ),
-        body: FutureBuilder<List<ListPersonModel>>(
+        body: internet == false
+        ?ListView.builder(
+              itemCount: model.length,
+              
+              itemBuilder: (context, index) {
+                ListPersonModel item =model [index];
+                return ListTile(
+                  leading: Image.network(
+                    errorBuilder:(context, error, stackTrace) {
+                  return Container();
+                    },item.avatar ??""),
+                  title: Text(item.name ?? ""),
+                  trailing: Text(item.id ?? ""),);
+              },)
+         : FutureBuilder<List<ListPersonModel>>(
           ///future: local onde informações serão buscadas
           future: MoneyController().getListPerson(),
           builder: (context, snapshot) {
@@ -76,5 +118,27 @@ class _HomeViewState extends State<HomeView> {
           }
         ));
   }
+  verifyData(AsyncSnapshot snapshot)async {
+    try{
+      
+      model.addAll(snapshot.data ?? []);
+      await SecureStorage()
+      .writeSecureData(pessoas, json.encode(snapshot.data));
+    }catch (e){
+      print("erro ao salvar lista");
+    }
+  }
+  readMemory()async{
+    var result = await SecureStorage().readSecureData(pessoas);
+    if (result == null ) return;
+    List<ListPersonModel> lista = (json.decode(result) as List)
+        .map((e) => ListPersonModel.fromJson(e))
+        .toList();
+    model.addAll(lista);
+  }
+  Future<Null> refresh() async{
+    setState(() {
+      
+    });
+  }
  }
-
